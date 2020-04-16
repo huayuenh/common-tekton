@@ -1,0 +1,34 @@
+---
+apiVersion: tekton.dev/v1alpha1
+kind: Pipeline
+metadata:
+  name: pipeline-%TASK_NAME%
+spec:
+  params:
+    - name: repository
+    - name: pipeline-pvc
+    - name: ibmcloud-api-key
+    - name: pipeline-run-id
+
+  tasks:
+
+    # - name: setup
+    #   taskRef:
+    #     name: setup-%TASK_NAME%
+    #   params:
+    #     - name: task-pvc
+    #       value: $(params.pipeline-pvc)
+
+    # DON'T FORGET TO USE runAfter IN YOUR TASK
+    # IF YOU USE SETUP
+    #      runAfter:
+    #        - setup
+
+    # - name: assert
+    #   taskRef:
+    #     name: assert-%TASK_NAME%
+    #   runAfter:
+    #     -
+    #   params:
+    #     - name: task-pvc
+    #       value: $(params.pipeline-pvc)

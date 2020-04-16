@@ -1,0 +1,69 @@
+---
+apiVersion: tekton.dev/v1alpha1
+kind: TriggerTemplate
+metadata:
+  name: template-check-github-statuses
+spec:
+  params:
+    - name: docker-config-json
+    - name: ibmcloud-api-key
+    - name: repository
+    - name: target-branch
+    - name: git-commit
+    - name: git-token
+    - name: evidence-locker-repo
+
+  resourcetemplates:
+
+    - apiVersion: v1
+      kind: PersistentVolumeClaim
+      metadata:
+        name: pipelinerun-$(uid)-pvc
+      spec:
+        resources:
+          requests:
+            storage: 5Gi
+        volumeMode: Filesystem
+        accessModes:
+          - ReadWriteOnce
+
+    - apiVersion: v1
+      kind: Secret
+      data:
+        .dockerconfigjson: $(params.docker-config-json)
+      metadata:
+        name: cocoa-artifactory-auth
+      type: kubernetes.io/dockerconfigjson
+
+    - apiVersion: v1
+      kind: ServiceAccount
+      imagePullSecrets:
+        - name: cocoa-artifactory-auth
+      metadata:
+        name: cocoa-pullsecret
+
+    - apiVersion: tekton.dev/v1alpha1
+      kind: PipelineRun
+      metadata:
+        name: pipelinerun-$(uid)
+      spec:
+        serviceAccountName: cocoa-pullsecret
+        pipelineRef:
+          name: pipeline-check-github-statuses
+        params:
+          - name: pipeline-pvc
+            value: pipelinerun-$(uid)-pvc
+          - name: repository
+            value: $(params.repository)
+          - name: ibmcloud-api-key
+            value: $(params.ibmcloud-api-key)
+          - name: pipeline-run-id
+            value: $(uid)
+          - name: git-token
+            value: $(params.git-token)
+          - name: git-commit
+            value: $(params.git-commit)
+          - name: target-branch
+            value: $(params.target-branch)
+          - name: evidence-locker-repo
+            value: $(params.evidence-locker-repo)

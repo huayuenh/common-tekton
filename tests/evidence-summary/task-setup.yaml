@@ -1,0 +1,34 @@
+---
+apiVersion: tekton.dev/v1alpha1
+kind: Task
+metadata:
+  name: setup-test-evidence-summary
+spec:
+  inputs:
+    params:
+      - name: task-pvc
+      - name: github-token
+  steps:
+    - name: setup
+      image: ibmcom/pipeline-base-image:2.6
+      env:
+        - name: GIT_TOKEN
+          value: $(inputs.params.github-token)
+      command: ["/bin/bash", "-c"]
+      workingDir: "/artifacts"
+      args:
+        - |
+          set -e -o pipefail;
+
+          echo "export GIT_TOKEN=$GIT_TOKEN" >> build.properties
+
+          cat build.properties
+
+      volumeMounts:
+        - mountPath: /artifacts
+          name: task-volume
+
+  volumes:
+    - name: task-volume
+      persistentVolumeClaim:
+        claimName: $(inputs.params.task-pvc)

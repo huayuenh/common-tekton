@@ -1,0 +1,59 @@
+---
+apiVersion: tekton.dev/v1alpha1
+kind: Task
+metadata:
+  name: assert-test-get-git-credentials
+spec:
+  inputs:
+    params:
+      - name: task-pvc
+        description: the task pvc
+  steps:
+    - name: setup
+      image: ibmcom/pipeline-base-image:2.6
+      command: ["/bin/bash", "-c"]
+      workingDir: "/artifacts"
+      args:
+        - |
+          set -e -o pipefail;
+
+          source build.properties
+
+          if [ -z $REPOSITORY ]; then
+            echo "REPOSITORY is missing"
+            exit 1
+          fi
+
+          if [ -z $GIT_AUTH_USER ]; then
+            echo "GIT_AUTH_USER is missing"
+            exit 1
+          fi
+
+          if [ -z $GIT_TOKEN ]; then
+            echo "GIT_TOKEN is missing"
+            exit 1
+          fi
+
+          if [ -z $GHE_TOKEN ]; then
+            echo "GHE_TOKEN is missing"
+            exit 1
+          fi
+
+          if [ -z $REPO_NAME ]; then
+            echo "REPO_NAME is missing"
+            exit 1
+          fi
+
+          if [ -z $REPO ]; then
+            echo "REPO is missing"
+            exit 1
+          fi
+
+      volumeMounts:
+        - mountPath: /artifacts
+          name: task-volume
+
+  volumes:
+    - name: task-volume
+      persistentVolumeClaim:
+        claimName: $(inputs.params.task-pvc)

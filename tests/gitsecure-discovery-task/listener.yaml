@@ -1,0 +1,11 @@
+---
+apiVersion: tekton.dev/v1alpha1
+kind: EventListener
+metadata:
+  name: listener-gitsecure-discovery-task
+spec:
+  triggers:
+    - binding:
+        name: binding-gitsecure-discovery-task
+      template:
+        name: template-gitsecure-discovery-task

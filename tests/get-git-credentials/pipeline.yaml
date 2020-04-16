@@ -1,0 +1,43 @@
+---
+apiVersion: tekton.dev/v1alpha1
+kind: Pipeline
+metadata:
+  name: pipeline-get-git-credentials
+spec:
+  params:
+    - name: repository
+      description: the git repo
+    - name: pipeline-pvc
+      description: pipeline pvc name place holder
+    - name: ibmcloud-api-key
+      description: ibmcloud api key
+  tasks:
+
+    - name: setup
+      taskRef:
+        name: setup-test-get-git-credentials
+      params:
+        - name: task-pvc
+          value: $(params.pipeline-pvc)
+
+    - name: get-git-credentials
+      taskRef:
+        name: get-git-credentials
+      runAfter:
+        - setup
+      params:
+        - name: credentials-pvc
+          value: $(params.pipeline-pvc)
+        - name: ibmcloud-api-key
+          value: $(params.ibmcloud-api-key)
+        - name: repository
+          value: $(params.repository)
+
+    - name: assert
+      taskRef:
+        name: assert-test-get-git-credentials
+      runAfter:
+        - get-git-credentials
+      params:
+        - name: task-pvc
+          value: $(params.pipeline-pvc)

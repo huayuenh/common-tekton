@@ -1,0 +1,83 @@
+---
+apiVersion: tekton.dev/v1alpha1
+kind: TriggerTemplate
+metadata:
+  name: template-containerize
+spec:
+  params:
+    - name: repository
+      description: The git repo
+    - name: api-key
+      description: ibmcloud api key
+    - name: pipeline-debug
+      description: pipeline debug
+      default: "1"
+    - name: branch
+      description: branch
+    - name: revision
+      descriprion: revision
+    - name: imageUrl
+      description: The image url in your container registry
+    - name: inventory-repo
+    - name: version
+
+  resourcetemplates:
+
+    - apiVersion: v1
+      kind: PersistentVolumeClaim
+      metadata:
+        name: pipelinerun-$(uid)-pvc
+      spec:
+        resources:
+          requests:
+            storage: 5Gi
+        volumeMode: Filesystem
+        accessModes:
+          - ReadWriteOnce
+
+    - apiVersion: tekton.dev/v1alpha1
+      kind: PipelineResource
+      metadata:
+        name: image-to-build
+      spec:
+        type: image
+        params:
+          - name: url
+            value: $(params.imageUrl)
+
+    - apiVersion: v1
+      kind: Secret
+      metadata:
+        name: cd-secret
+      type: Opaque
+      stringData:
+        API_KEY: $(params.api-key)
+
+    - apiVersion: tekton.dev/v1alpha1
+      kind: PipelineRun
+      metadata:
+        name: pipelinerun-$(uid)
+      spec:
+        pipelineRef:
+          name: pipeline-containerize
+        resources:
+          - name: app-image
+            resourceRef:
+              name: image-to-build
+        params:
+          - name: credentials-pvc
+            value: pipelinerun-$(uid)-pvc
+          - name: pipeline-debug
+            value: $(params.pipeline-debug)
+          - name: api-key
+            value: $(params.api-key)
+          - name: repository
+            value: $(params.repository)
+          - name: branch
+            value: $(params.branch)
+          - name: revision
+            value: $(params.revision)
+          - name: inventory-repo
+            value: $(params.inventory-repo)
+          - name: version
+            value: $(params.version)

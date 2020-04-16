@@ -1,0 +1,104 @@
+---
+apiVersion: tekton.dev/v1alpha1
+kind: Pipeline
+metadata:
+  name: pipeline-containerize
+spec:
+  params:
+    - name: credentials-pvc
+      description: task-pvc
+    - name: pipeline-debug
+      description: pipeline debug
+    - name: api-key
+      description: ibmcloud api key
+    - name: repository
+      description: repository
+    - name: branch
+      description: branch
+    - name: revision
+      description: revision
+    - name: inventory-repo
+    - name: version
+  resources:
+    - name: app-image
+      type: image
+  tasks:
+
+    - name: fetch-credentials
+      taskRef:
+        name: get-git-credentials
+      params:
+        - name: credentials-pvc
+          value: $(params.credentials-pvc)
+        - name: ibmcloud-api-key
+          value: $(params.api-key)
+        - name: repository
+          value: $(params.repository)
+        - name: pipeline-debug
+          value: $(params.pipeline-debug)
+
+    - name: fetch-code
+      runAfter: [fetch-credentials]
+      taskRef:
+        name: git-clone
+      params:
+        - name: task-pvc
+          value: $(params.credentials-pvc)
+        - name: repository
+          value: $(params.repository)
+        - name: branch
+          value: $(params.branch)
+        - name: revision
+          value: $(params.revision)
+        - name: pipeline-debug
+          value: $(params.pipeline-debug)
+
+    - name: containerize-task
+      taskRef:
+        name: containerize-task
+      runAfter:
+        - fetch-code
+      params:
+        - name: task-pvc
+          value: $(params.credentials-pvc)
+        - name: pipeline-debug
+          value: $(params.pipeline-debug)
+        - name: additional-tags-script
+          value: |
+            # Include the clone task output variables in the environment
+            source /artifacts/build.properties
+            # The script is providing tag(s) as output
+            # But logs can be written as error stderr
+            echo "Providing an image tag including git branch and commit" >&2
+            # Add a specific tag with branch and commit
+            echo "${BUILD_TIMESTAMP}-${GIT_BRANCH}-${GIT_COMMIT}"
+      resources:
+        outputs:
+          - name: built-image
+            resource: app-image
+
+    - name: update-inventory-task
+      taskRef:
+        name: update-inventory-task
+      runAfter:
+        - containerize-task
+      params:
+        - name: task-pvc
+          value: $(params.credentials-pvc)
+        - name: pipeline-debug
+          value: $(params.pipeline-debug)
+        - name: inventory-repo
+          value: $(params.inventory-repo)
+        - name: version
+          value: $(params.version)
+
+    - name: cleanup-task
+      taskRef:
+        name: cleanup
+      runAfter:
+        - containerize-task
+      params:
+        - name: task-pvc
+          value: $(params.credentials-pvc)
+        - name: ibmcloud-api-key
+          value: $(params.api-key)

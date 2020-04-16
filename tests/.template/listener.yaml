@@ -1,0 +1,11 @@
+---
+apiVersion: tekton.dev/v1alpha1
+kind: EventListener
+metadata:
+  name: listener-%TASK_NAME%
+spec:
+  triggers:
+    - binding:
+        name: binding-%TASK_NAME%
+      template:
+        name: template-%TASK_NAME%

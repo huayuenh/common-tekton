@@ -1,0 +1,11 @@
+---
+apiVersion: tekton.dev/v1alpha1
+kind: EventListener
+metadata:
+  name: listener-check-github-statuses
+spec:
+  triggers:
+    - binding:
+        name: binding-check-github-statuses
+      template:
+        name: template-check-github-statuses

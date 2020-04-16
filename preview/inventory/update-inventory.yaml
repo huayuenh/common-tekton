@@ -1,0 +1,110 @@
+---
+apiVersion: tekton.dev/v1alpha1
+kind: Task
+metadata:
+  name: update-inventory-task
+spec:
+  inputs:
+    params:
+      - name: task-pvc
+        description: the task pvc - this is the volume where the files (Dockerfile etc..) are expected to be
+      - name: properties-file
+        description: file containing properties out of containerize task
+        default: build.properties
+      - name: pipeline-debug
+        description: Pipeline debug mode
+        default: "0"
+      - name: version
+        description: version of the image built
+        default: ""
+      - name: inventory-integration
+        description: The toolchain integration name of the inventory repository
+        default: "inventory-repo"
+      - name: inventory-repo
+        description: The inventory repository
+        default: ""
+  stepTemplate:
+    env:
+      - name: PIPELINE_DEBUG
+        value: $(inputs.params.pipeline-debug)
+  steps:
+    - name: update-inventory
+      image: ibmcom/pipeline-base-image
+      env:
+        - name: PROPERTIES_FILE
+          value: $(inputs.params.properties-file)
+        - name: INVENTORY_INTEGRATION
+          value: $(inputs.params.inventory-integration)
+        - name: INVENTORY_REPO
+          value: $(inputs.params.inventory-repo)
+        - name: VERSION
+          value: $(inputs.params.version)
+      command: ["/bin/bash", "-c"]
+      args:
+        - |
+          #!/bin/bash
+          set -e -o pipefail
+          source /artifacts/$PROPERTIES_FILE
+
+          git clone https://${GIT_AUTH_USER}:${GHE_TOKEN}@github.ibm.com/cocoa/inventory-script.git
+          cd inventory-script
+          source inventory.sh
+          cd ..
+
+          if [ $PIPELINE_DEBUG == 1 ]; then
+            pwd
+            env
+            trap env EXIT
+            set -x
+          fi
+
+          if [ "INVENTORY_REPO" == "" ]; then
+            INVENTORY_REPO=$(jq -r '.services[] | select(.toolchain_binding.name == "$INVENTORY_INTEGRATION")
+              | .parameters.owner_id + "/" + .parameters.repo_name' /cd-config/toolchain.json)
+          fi
+
+          git clone "https://$GIT_TOKEN@github.ibm.com/$INVENTORY_REPO.git" inventory
+
+          cd inventory
+
+          git config --global user.email "tekton@pipeline.com"
+          git config --global user.name "Tekton"
+
+          # workaround to have a root commit (so you can create a PR against this empty branch)
+          # later on we should probably clone a repo which has already a root commit
+          if [[ $(git branch | wc -l) -eq 0 ]]; then
+            git commit --allow-empty -m 'initial commit'
+            git push origin master
+          fi
+
+          image=$(cat /artifacts/tags.lst)
+
+          if [ -z "$VERSION" ]; then
+            if [ -n "$APP_VERSION" ]; then
+              VERSION=$APP_VERSION
+            else
+              VERSION=$(git tag --points-at HEAD)
+              if [ -z "$VERSION" ]; then
+                echo "Build version in unknown, build will be aborted"
+                exit 1
+              fi
+            fi
+          fi
+
+          inventory version add $VERSION $REPO $image
+
+      volumeMounts:
+        - mountPath: /artifacts
+          name: task-volume
+        - mountPath: /cd-config
+          name: cd-config-volume
+  volumes:
+    - name: task-volume
+      persistentVolumeClaim:
+        claimName: $(inputs.params.task-pvc)
+    - name: cd-config-volume
+      configMap:
+        name: toolchain
+        items:
+          - key: toolchain.json
+            path: toolchain.json

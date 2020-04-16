@@ -1,0 +1,69 @@
+---
+apiVersion: tekton.dev/v1alpha1
+kind: TriggerTemplate
+metadata:
+  name: template-gitsecure-discovery-task
+spec:
+  params:
+    - name: docker-config-json
+    - name: repository
+      description: The git repo
+    - name: ibmcloud-api-key
+      description: ibmcloud api key
+    - name: revision
+    - name: pipelineRunId
+    - name: evidence-repo
+    - name: commit-id
+
+  resourcetemplates:
+
+    - apiVersion: v1
+      kind: PersistentVolumeClaim
+      metadata:
+        name: pipelinerun-$(uid)-pvc
+      spec:
+        resources:
+          requests:
+            storage: 5Gi
+        volumeMode: Filesystem
+        accessModes:
+          - ReadWriteOnce
+
+    - apiVersion: v1
+      kind: Secret
+      data:
+        .dockerconfigjson: $(params.docker-config-json)
+      metadata:
+        name: cocoa-artifactory-auth
+      type: kubernetes.io/dockerconfigjson
+
+    - apiVersion: v1
+      kind: ServiceAccount
+      imagePullSecrets:
+        - name: cocoa-artifactory-auth
+      metadata:
+        name: cocoa-pullsecret
+
+    - apiVersion: tekton.dev/v1alpha1
+      kind: PipelineRun
+      metadata:
+        name: pipelinerun-$(uid)
+      spec:
+        serviceAccountName: cocoa-pullsecret
+        pipelineRef:
+          name: pipeline-gitsecure-discovery-task
+        params:
+          - name: pipeline-pvc
+            value: pipelinerun-$(uid)-pvc
+          - name: repository
+            value: $(params.repository)
+          - name: ibmcloud-api-key
+            value: $(params.ibmcloud-api-key)
+          - name: pipelineRunId
+            value: $(uid)
+          - name: evidence-repo
+            value: $(params.evidence-repo)
+          - name: revision
+            value: $(params.revision)
+          - name: commit-id
+            value: $(params.commit-id)

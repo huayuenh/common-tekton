@@ -1,0 +1,11 @@
+---
+apiVersion: tekton.dev/v1alpha1
+kind: EventListener
+metadata:
+  name: listener-evidence-summary
+spec:
+  triggers:
+    - binding:
+        name: binding-evidence-summary
+      template:
+        name: template-evidence-summary

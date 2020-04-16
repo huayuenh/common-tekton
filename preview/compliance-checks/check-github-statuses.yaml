@@ -1,0 +1,129 @@
+---
+apiVersion: tekton.dev/v1alpha1
+kind: Task
+metadata:
+  name: check-github-statuses-task
+spec:
+  inputs:
+    params:
+      - name: pipelineRunId
+        description: pipelineRunId unique id
+      - name: target-branch
+        description: target branch
+      - name: task-pvc
+        description: the output pvc - this is where the cloned repository will be stored
+      - name: requiredChecks
+        description: required checks to verify in github
+      - name: context
+        description: the context of the github checks
+      - name: collect-evidence
+        description: determines if the task should write to the evidence locker repo
+        default: "true"
+      - name: repository-integration
+        description: The toolchain integration name of the application repository
+        default: ""
+      - name: pipeline-debug
+        description: Pipeline debug mode
+        default: "0"
+  stepTemplate:
+    env:
+      - name: PIPELINE_DEBUG
+        value: $(inputs.params.pipeline-debug)
+      - name: PIPELINE_ID
+        valueFrom:
+          fieldRef:
+            fieldPath: metadata.annotations['devops.cloud.ibm.com/pipeline-id']
+  steps:
+    - name: check-github-statuses
+      image: wcp-compliance-automation-team-docker-local.artifactory.swg-devops.com/ibm-compliance-automation:0.4
+      env:
+        - name: PIPELINE_RUN_ID
+          value: $(inputs.params.pipelineRunId)
+        - name: TARGET_BRANCH
+          value: $(inputs.params.target-branch)
+        - name: REQUIRED_CHECKS
+          value: $(inputs.params.requiredChecks)
+        - name: CONTEXT
+          value: $(inputs.params.context)
+        - name: COLLECT_EVIDENCE
+          value: $(inputs.params.collect-evidence)
+        - name: REPOSITORY_INTEGRATION
+          value: $(inputs.params.repository-integration)
+      command: ["/bin/bash", "-c"]
+      args:
+        - |
+          source /artifacts/build.properties
+
+          if [ $PIPELINE_DEBUG == 1 ]; then
+            env
+            cat /cd-config/toolchain.json
+            trap env EXIT
+            set -x
+          fi
+
+          TOOLCHAIN_CONFIG=$(cat /cd-config/toolchain.json)
+          if [ "$REPOSITORY_INTEGRATION" != "" ]; then
+            GH_ORG=$(echo ${TOOLCHAIN_CONFIG} | jq -r '.services[]
+              | select(.toolchain_binding.name == "$(inputs.params.repository-integration)")
+              | .parameters.owner_id')
+          else
+            # REPOSITORY is coming from '/artifacts/build.properties'
+            GH_ORG=${REPOSITORY%/*}
+            GH_ORG=${GH_ORG##*/}
+          fi
+
+          PIPELINE_REGION=$(jq --arg pipeline_id "$PIPELINE_ID" -r '.services[]
+            | select(.instance_id==$pipeline_id)
+            | .region_id' /cd-config/toolchain.json)
+
+          JOB_URL="https://cloud.ibm.com/devops/pipelines/tekton/$PIPELINE_ID/runs/$PIPELINE_RUN_ID?env_id=$PIPELINE_REGION"
+          TOOLCHAIN_ID=$(jq -r '.toolchain_guid' /cd-config/toolchain.json)
+          TOOLCHAIN_REGION=$(jq -r '.region_id' /cd-config/toolchain.json)
+          TOOLCHAIN_URL="https://cloud.ibm.com/devops/toolchains/$TOOLCHAIN_ID?env_id=$TOOLCHAIN_REGION"
+
+          export GHE_ORG=$GH_ORG
+          export GHE_REPO=$REPO
+          export GHE_TOKEN=$GHE_TOKEN
+          export GHE_ORG=$GH_ORG
+          export GHE_REPO=$REPO
+          export GIT_COMMIT=$GIT_COMMIT
+          export GIT_BRANCH=$GIT_BRANCH
+
+          cocoa set-status \
+          --targetURL=$JOB_URL \
+          --state="pending" \
+          --context=$CONTEXT \
+          --description="Check Github Statuses is running."
+
+          export EVIDENCE_LOCKER_REPO=$(jq -r '.services[] | select(.toolchain_binding.name=="evidence-repo")
+          | .parameters.owner_id + "/" + .parameters.repo_name' /cd-config/toolchain.json)
+          export GIT_BRANCH=$TARGET_BRANCH
+          if cocoa check pull-request-status --collect-evidence=${COLLECT_EVIDENCE}; then
+            cocoa set-status \
+              --targetURL=$JOB_URL \
+              --state="success" \
+              --context=$CONTEXT \
+              --description="Check Github Statuses was successful."
+          else
+            cocoa set-status \
+              --targetURL=$JOB_URL \
+              --state="failure" \
+              --context=$CONTEXT \
+              --description="Check Github Statuses has failed."
+            exit 1
+          fi
+      volumeMounts:
+        - mountPath: /artifacts
+          name: task-volume
+        - mountPath: /cd-config
+          name: cd-config-volume
+  volumes:
+    - name: task-volume
+      persistentVolumeClaim:
+        claimName: $(inputs.params.task-pvc)
+    - name: cd-config-volume
+      configMap:
+        name: toolchain
+        items:
+          - key: toolchain.json
+            path: toolchain.json

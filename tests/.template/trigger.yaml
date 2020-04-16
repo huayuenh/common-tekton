@@ -1,0 +1,57 @@
+---
+apiVersion: tekton.dev/v1alpha1
+kind: TriggerTemplate
+metadata:
+  name: template-%TASK_NAME%
+spec:
+  params:
+    - name: docker-config-json
+    - name: ibmcloud-api-key
+    - name: repository
+
+  resourcetemplates:
+
+    - apiVersion: v1
+      kind: PersistentVolumeClaim
+      metadata:
+        name: pipelinerun-$(uid)-pvc
+      spec:
+        resources:
+          requests:
+            storage: 5Gi
+        volumeMode: Filesystem
+        accessModes:
+          - ReadWriteOnce
+
+    - apiVersion: v1
+      kind: Secret
+      data:
+        .dockerconfigjson: $(params.docker-config-json)
+      metadata:
+        name: cocoa-artifactory-auth
+      type: kubernetes.io/dockerconfigjson
+
+    - apiVersion: v1
+      kind: ServiceAccount
+      imagePullSecrets:
+        - name: cocoa-artifactory-auth
+      metadata:
+        name: cocoa-pullsecret
+
+    - apiVersion: tekton.dev/v1alpha1
+      kind: PipelineRun
+      metadata:
+        name: pipelinerun-$(uid)
+      spec:
+        serviceAccountName: cocoa-pullsecret
+        pipelineRef:
+          name: pipeline-%TASK_NAME%
+        params:
+          - name: pipeline-pvc
+            value: pipelinerun-$(uid)-pvc
+          - name: ibmcloud-api-key
+            value: $(params.ibmcloud-api-key)
+          - name: pipeline-run-id
+            value: $(uid)
+          - name: repository
+            value: $(params.repository)

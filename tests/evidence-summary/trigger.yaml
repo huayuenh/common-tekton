@@ -1,0 +1,53 @@
+---
+apiVersion: tekton.dev/v1alpha1
+kind: TriggerTemplate
+metadata:
+  name: template-evidence-summary
+spec:
+  params:
+    - name: repository
+      description: The git repo
+    - name: ibmcloud-api-key
+      description: ibmcloud api key
+    - name: pipeline-debug
+      description: pipeline debug
+      default: "1"
+    - name: github-token
+      description: ghe token
+    - name: github-url
+      description: github url
+    - name: github-user
+      description: github user
+
+  resourcetemplates:
+
+    - apiVersion: v1
+      kind: PersistentVolumeClaim
+      metadata:
+        name: pipelinerun-$(uid)-pvc
+      spec:
+        resources:
+          requests:
+            storage: 5Gi
+        volumeMode: Filesystem
+        accessModes:
+          - ReadWriteOnce
+
+    - apiVersion: tekton.dev/v1alpha1
+      kind: PipelineRun
+      metadata:
+        name: pipelinerun-$(uid)
+      spec:
+        pipelineRef:
+          name: pipeline-evidence-summary
+        params:
+          - name: credentials-pvc
+            value: pipelinerun-$(uid)-pvc
+          - name: pipeline-debug
+            value: $(params.pipeline-debug)
+          - name: github-token
+            value: $(params.github-token)
+          - name: github-url
+            value: $(params.github-url)
+          - name: github-user
+            value: $(params.github-user)

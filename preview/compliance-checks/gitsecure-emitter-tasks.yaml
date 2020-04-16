@@ -1,0 +1,102 @@
+---
+apiVersion: tekton.dev/v1alpha1
+kind: Task
+metadata:
+  name: gitsecure-evidence-emitter-task
+spec:
+  inputs:
+    params:
+      - name: repository
+        description: the git repo
+      - name: revision
+        description: the revision
+        default: master
+      - name: apikey
+        description: the ibmcloud api key
+      - name: commit-id
+        description: git commit id
+      - name: pipelineRunId
+        description: pipelinerun id
+      - name: evidence-repo
+        description: audit-tree evidence collection repo
+  steps:
+    - name: vulnerability-evidence-emitter
+      image: wcp-compliance-automation-team-docker-local.artifactory.swg-devops.com/gitsecure/audit-vulnerability-emitter:1.0.0
+      imagePullPolicy: Always
+      command:
+        - /gitsecure/audit-vulnerability-emitter
+      args:
+        - "-apikey"
+        - "$(inputs.params.apikey)"
+        - "-giturl"
+        - $(inputs.params.repository)
+        - "-gitbranch"
+        - $(inputs.params.revision)
+        - "-rigserviceapi"
+        - "http://169.47.180.157:30850"
+        - "-evidencerepo"
+        - $(inputs.params.evidence-repo)
+        - "-jobid"
+        - $(inputs.params.pipelineRunId)
+        - "-commitid"
+        - $(inputs.params.commit-id)
+    - name: bom-evidence-emitter
+      image: wcp-compliance-automation-team-docker-local.artifactory.swg-devops.com/gitsecure/audit-bomemitter:rc1
+      imagePullPolicy: Always
+      command:
+        - /gitsecure/audit-bom-emitter
+      args:
+        - "-apikey"
+        - "$(inputs.params.apikey)"
+        - "-giturl"
+        - $(inputs.params.repository)
+        - "-gitbranch"
+        - $(inputs.params.revision)
+        - "-rigserviceapi"
+        - "http://169.47.180.157:30850"
+        - "-evidencerepo"
+        - $(inputs.params.evidence-repo)
+        - "-jobid"
+        - $(inputs.params.pipelineRunId)
+        - "-commitid"
+        - $(inputs.params.commit-id)
+    - name: ossc-evidence-emitter
+      image: wcp-compliance-automation-team-docker-local.artifactory.swg-devops.com/gitsecure/audit-ossc-emitter:1.0.0
+      imagePullPolicy: Always
+      command:
+        - /gitsecure/audit-ossc-emitter
+      args:
+        - "-apikey"
+        - "$(inputs.params.apikey)"
+        - "-giturl"
+        - $(inputs.params.repository)
+        - "-gitbranch"
+        - $(inputs.params.revision)
+        - "-rigserviceapi"
+        - "http://169.47.180.157:30850"
+        - "-evidencerepo"
+        - $(inputs.params.evidence-repo)
+        - "-jobid"
+        - $(inputs.params.pipelineRunId)
+        - "-commitid"
+        - $(inputs.params.commit-id)
+    - name: cis-evidence-emitter
+      image: wcp-compliance-automation-team-docker-local.artifactory.swg-devops.com/gitsecure/audit-cis-emitter:1.0.0
+      imagePullPolicy: Always
+      command:
+        - /gitsecure/audit-cis-emitter
+      args:
+        - "-apikey"
+        - "$(inputs.params.apikey)"
+        - "-giturl"
+        - $(inputs.params.repository)
+        - "-gitbranch"
+        - $(inputs.params.revision)
+        - "-rigserviceapi"
+        - "http://169.47.180.157:30850"
+        - "-evidencerepo"
+        - $(inputs.params.evidence-repo)
+        - "-jobid"
+        - $(inputs.params.pipelineRunId)
+        - "-commitid"
+        - $(inputs.params.commit-id)

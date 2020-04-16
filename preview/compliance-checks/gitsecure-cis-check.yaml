@@ -1,0 +1,50 @@
+---
+apiVersion: tekton.dev/v1alpha1
+kind: Task
+metadata:
+  name: gitsecure-cis-task
+spec:
+  inputs:
+    params:
+      - name: task-pvc
+        description: the output pvc
+      - name: repository
+        description: the git repo
+      - name: revision
+        description: the revision
+        default: master
+      - name: api-key
+        description: the ibmcloud api key
+      - name: commit-id
+        description: git commit id
+      - name: pipeline-run-id
+        description: pipelinerun id
+      - name: pr-url
+        description: pull request html url
+  steps:
+    - name: cis
+      image: wcp-compliance-automation-team-docker-local.artifactory.swg-devops.com/gitsecure/cis-task:1.0.0
+      imagePullPolicy: Always
+      command:
+        - /go/src/github.ibm.com/rig-cis-task/bin/cis-task
+      args:
+        - "-giturl"
+        - $(inputs.params.repository)
+        - "-gitbranch"
+        - $(inputs.params.revision)
+        - "-repodir"
+        - "/workspace"
+        - "-rigserviceapi"
+        - "http://169.47.180.148:30950"
+        - "-pr"
+        - $(inputs.params.pr-url)
+        - "-apikey"
+        - $(inputs.params.api-key)
+        - "-runid"
+        - $(inputs.params.pipeline-run-id)
+        - "-commitid"
+        - $(inputs.params.commit-id)
+  volumes:
+    - name: task-volume
+      persistentVolumeClaim:
+        claimName: $(inputs.params.task-pvc)

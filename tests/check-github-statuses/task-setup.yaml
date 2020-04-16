@@ -1,0 +1,73 @@
+---
+apiVersion: tekton.dev/v1alpha1
+kind: Task
+metadata:
+  name: setup-test-check-github-statuses
+spec:
+  inputs:
+    params:
+      - name: task-pvc
+        description: foo
+      - name: ghe-token
+        description: github token
+        default: "abc123"
+      - name: properties-file
+        description: foo
+        default: build.properties
+      - name: git-commit
+        description: foo
+      - name: repository
+        description: foo
+      - name: target-branch
+        description: foo
+  steps:
+    - name: setup
+      image: ibmcom/pipeline-base-image:2.6
+      env:
+        - name: GIT_TOKEN
+          value: $(inputs.params.ghe-token)
+        - name: PROPERTIES_FILE
+          value: $(inputs.params.properties-file)
+        - name: GIT_COMMIT
+          value: $(inputs.params.git-commit)
+        - name: REPOSITORY
+          value: $(inputs.params.repository)
+        - name: TARGET_BRANCH
+          value: $(inputs.params.target-branch)
+      command: ["/bin/bash", "-c"]
+      workingDir: "/artifacts"
+      args:
+        - |
+          set -e -o pipefail;
+
+          if [[ "$REPOSITORY" != *.git ]]; then
+            REPOSITORY="${REPOSITORY}.git"
+          fi
+
+          GIT_BRANCH=$TARGET_BRANCH
+
+          GH_ORG=${REPOSITORY%/*}
+          GH_ORG=${GH_ORG##*/}
+          REPO=${REPOSITORY##*/}
+          export REPO=${REPO%.git}
+
+          echo "export REPOSITORY=$REPOSITORY" >> $PROPERTIES_FILE
+          echo "export GIT_COMMIT=$GIT_COMMIT" >> $PROPERTIES_FILE
+          echo "export GIT_BRANCH=$GIT_BRANCH" >> $PROPERTIES_FILE
+
+          echo "export GIT_AUTH_USER=x-token-auth" >> $PROPERTIES_FILE
+          echo "export GIT_TOKEN=$GIT_TOKEN" >> $PROPERTIES_FILE
+          echo "export GHE_TOKEN=$GIT_TOKEN" >> $PROPERTIES_FILE
+          echo "export REPO_NAME=$REPO" >> $PROPERTIES_FILE
+          echo "export REPO=$REPO" >> $PROPERTIES_FILE
+
+          cat $PROPERTIES_FILE
+
+      volumeMounts:
+        - mountPath: /artifacts
+          name: task-volume
+
+  volumes:
+    - name: task-volume
+      persistentVolumeClaim:
+        claimName: $(inputs.params.task-pvc)

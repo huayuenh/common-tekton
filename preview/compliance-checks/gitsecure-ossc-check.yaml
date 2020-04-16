@@ -1,0 +1,39 @@
+---
+apiVersion: tekton.dev/v1alpha1
+kind: Task
+metadata:
+  name: gitsecure-ossc-task
+spec:
+  inputs:
+    params:
+      - name: repository
+        description: the git repo
+      - name: revision
+        description: the revision
+        default: master
+      - name: api-key
+        description: the ibmcloud api key
+      - name: commit-id
+        description: git commit id
+      - name: pipeline-run-id
+        description: pipelinerun id
+      - name: evidence-repo
+        description: audit-tree  evidence collection repo
+  steps:
+    - name: ossc
+      image: wcp-compliance-automation-team-docker-local.artifactory.swg-devops.com/gitsecure/ossc-task:1.0.0
+      imagePullPolicy: Always
+      command:
+        - "python"
+        - "/ossc/ossc.py"
+      args:
+        - "--giturl"
+        - $(inputs.params.repository)
+        - "--gitbranch"
+        - $(inputs.params.revision)
+        - "--rigserviceapi"
+        - "http://169.47.180.157:30850"
+        - "--apikey"
+        - $(inputs.params.api-key)
+        - "--commitid"
+        - $(inputs.params.commit-id)

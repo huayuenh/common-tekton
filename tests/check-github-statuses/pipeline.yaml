@@ -1,0 +1,80 @@
+---
+apiVersion: tekton.dev/v1alpha1
+kind: Pipeline
+metadata:
+  name: pipeline-check-github-statuses
+spec:
+  params:
+    - name: repository
+    - name: pipeline-pvc
+    - name: pipeline-run-id
+    - name: ibmcloud-api-key
+    - name: git-token
+    - name: target-branch
+    - name: git-commit
+    - name: evidence-locker-repo
+
+  tasks:
+    - name: setup
+      taskRef:
+        name: setup-test-check-github-statuses
+      params:
+        - name: task-pvc
+          value: $(params.pipeline-pvc)
+        - name: ghe-token
+          value: $(params.git-token)
+        - name: repository
+          value: $(params.repository)
+        - name: git-commit
+          value: $(params.git-commit)
+        - name: target-branch
+          value: $(params.target-branch)
+
+    - name: check-github-statuses
+      runAfter:
+        - setup
+      taskRef:
+        name: check-github-statuses-task
+      params:
+        - name: task-pvc
+          value: $(params.pipeline-pvc)
+        - name: pipelineRunId
+          value: $(params.pipeline-run-id)
+        - name: target-branch
+          value: $(params.target-branch)
+        - name: evidence-locker-repo
+          value: $(params.evidence-locker-repo)
+        - name: requiredChecks
+          value: |
+            [{
+              "type": "check-run",
+              "name": "secret-detection",
+              "params": {
+                "name": "whitewater-detect-secrets"
+              }
+            }, {
+              "type": "branch-protection",
+              "name": "code-review",
+              "params": {
+                "checks": [
+                  "whitewater-detect-secrets",
+                  "tekton/pr-compliance"
+                ]
+              }
+            }]
+        - name: context
+          value: tekton/pr-compliance
+        - name: collect-evidence
+          value: "0"
+        - name: pipeline-debug
+          value: "1"
+
+#    - name: assert
+#      taskRef:
+#        name: assert-test-check-github-statuses
+#      runAfter:
+#        - check-github-statuses
+#      params:
+#        - name: task-pvc
+#          value: $(params.pipeline-pvc)
+#

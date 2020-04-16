@@ -1,0 +1,11 @@
+---
+apiVersion: tekton.dev/v1alpha1
+kind: EventListener
+metadata:
+  name: listener-containerize
+spec:
+  triggers:
+    - binding:
+        name: binding-containerize
+      template:
+        name: template-containerize

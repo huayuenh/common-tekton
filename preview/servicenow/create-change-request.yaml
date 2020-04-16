@@ -1,0 +1,183 @@
+---
+apiVersion: tekton.dev/v1alpha1
+kind: Task
+metadata:
+  name: create-change-request
+spec:
+  inputs:
+    params:
+      - name: pipeline-pvc
+        description: the output pvc - this is where the cloned repository will be stored
+      - name: repository
+        description: the git repo
+      - name: ibmcloud-api-key
+        description:
+      - name: servicenow-api-token
+        description:
+      - name: servicenow-api-url
+        description:
+      - name: servicenow-configuration-item
+        description:
+      - name: cluster
+        description:
+      - name: cluster-region
+        description:
+      - name: cluster-namespace
+        description:
+      - name: application
+        description:
+      - name: emergency-label
+        description:
+      - name: evidence-locker-url
+        description:
+      - name: pipeline-run-id
+        description:
+      - name: change-request-id
+        description: optional ServiceNow Change Request ID
+        default: "notAvailable"
+      - name: ibmcloud-api
+        description: the ibmcloud api endpoint
+        default: "https://cloud.ibm.com"
+      - name: collect-evidence
+        description: specifies if the task should write to the evidence locker repo
+        default: "true"
+      - name: pipeline-debug
+        description: Pipeline debug mode
+        default: "0"
+  stepTemplate:
+    env:
+      - name: PIPELINE_DEBUG
+        value: $(inputs.params.pipeline-debug)
+  steps:
+
+    - name: set-env-vars
+      image: ibmcom/pipeline-base-image
+      env:
+        - name: HOME
+          value: "/root"
+        - name: CLUSTER_NAMESPACE
+          value: $(inputs.params.cluster-namespace)
+        - name: APPLICATION
+          value: $(inputs.params.application)
+        - name: IBMCLOUD_API_KEY
+          value: $(inputs.params.ibmcloud-api-key)
+        - name: IBMCLOUD_API_ENDPOINT
+          value: $(inputs.params.ibmcloud-api)
+        - name: CLUSTER_REGION
+          value: $(inputs.params.cluster-region)
+        - name: CLUSTER_NAME
+          value: $(inputs.params.cluster)
+      command: ["/bin/bash", "-c"]
+      args:
+        - |
+          set -e -o pipefail
+
+          if [ $PIPELINE_DEBUG == 1 ]; then
+            pwd
+            env
+            trap env EXIT
+            set -x
+          fi
+
+          source /artifacts/build.properties
+
+          ibmcloud config --check-version=false
+          ibmcloud login  -a $IBMCLOUD_API_ENDPOINT -r $CLUSTER_REGION --apikey $IBMCLOUD_API_KEY
+          $(ibmcloud ks cluster config --cluster "${CLUSTER_NAME}" --export)
+
+          FROM=$(kubectl get pods -n $CLUSTER_NAMESPACE -l app=$APPLICATION -o json \
+          | jq '.items[0].spec.containers[0].image' \
+          | cut -d : -f 2 \
+          | cut -d - -f 3 \
+          | cut -d @ -f 1)
+
+          echo "FROM=${FROM}" >> /artifacts/build.properties
+      volumeMounts:
+        - mountPath: /artifacts
+          name: task-volume
+    - name: create-cr
+      image: wcp-compliance-automation-team-docker-local.artifactory.swg-devops.com/ibm-compliance-automation:0.4
+      env:
+        - name: HOME
+          value: "/root"
+        - name: REPOSITORY
+          value: $(inputs.params.repository)
+        - name: CHANGE_REQUEST_ID
+          value: $(inputs.params.change-request-id)
+        - name: IBMCLOUD_API_KEY
+          value: $(inputs.params.ibmcloud-api-key)
+        - name: IBMCLOUD_API_ENDPOINT
+          value: $(inputs.params.ibmcloud-api)
+        - name: SERVICENOW_TOKEN
+          value: $(inputs.params.servicenow-api-token)
+        - name: SERVICENOW_URL
+          value: $(inputs.params.servicenow-api-url)
+        - name: SERVICENOW_CONFIGURATION_ITEM
+          value: $(inputs.params.servicenow-configuration-item)
+        - name: CLUSTER_NAME
+          value: $(inputs.params.cluster)
+        - name: CLUSTER_REGION
+          value: $(inputs.params.cluster-region)
+        - name: CLUSTER_NAMESPACE
+          value: $(inputs.params.cluster-namespace)
+        - name: APPLICATION
+          value: $(inputs.params.application)
+        - name: EMERGENCY_LABEL
+          value: $(inputs.params.emergency-label)
+        - name: EVIDENCE_LOCKER_URL
+          value: $(inputs.params.evidence-locker-url)
+        - name: PIPELINE_RUN_ID
+          value: $(inputs.params.pipeline-run-id)
+        - name: COLLECT_EVIDENCE
+          value: $(inputs.params.collect-evidence)
+      command: ["/bin/bash", "-c"]
+      args:
+        - |
+          set -e -o pipefail
+
+          if [ $PIPELINE_DEBUG == 1 ]; then
+            pwd
+            env
+            trap env EXIT
+            set -x
+          fi
+
+          source /artifacts/build.properties
+
+          echo "Connecting to IBM IKS cluster"
+          ibmcloud config --check-version=false
+          ibmcloud login  -a $IBMCLOUD_API_ENDPOINT -r $CLUSTER_REGION --apikey $IBMCLOUD_API_KEY
+          $(ibmcloud ks cluster config --cluster "${CLUSTER_NAME}" --export)
+          IBM_ACCOUNT_ID=$(ibmcloud account show | awk '/^Account ID/{print $NF}')
+          CONTAINER_REGISTRY=$(ibmcloud cr info | awk '/^Container Registry  /{print $NF}')
+
+          echo "Creating change request"
+          GHE_REPO=${REPOSITORY##*/}
+          export GHE_REPO=${GHE_REPO%.git}
+          GHE_ORG=${REPOSITORY%/*}
+          export GHE_ORG=${GHE_ORG##*/}
+
+          EVIDENCE_LOCKER_REPO=${EVIDENCE_LOCKER_URL##*/}
+          EVIDENCE_LOCKER_ORG=${EVIDENCE_LOCKER_URL%/*}
+          EVIDENCE_LOCKER_ORG=${EVIDENCE_LOCKER_ORG##*/}
+          export EVIDENCE_LOCKER_REPO=${EVIDENCE_LOCKER_ORG}/${EVIDENCE_LOCKER_REPO}
+          export IMAGE=${REGISTRY_URL}/${REGISTRY_NAMESPACE}/${IMAGE_NAME}:${IMAGE_TAG}
+          export TO=$(echo $IMAGE | sed -E 's/.*-([a-f0-9]*)$/\1/')
+          export FROM=$FROM
+
+          CHANGE_REQUEST_ID=$(cocoa change-request create --collect-evidence=${COLLECT_EVIDENCE}\
+          | grep CHG \
+          | head -1 \
+          | sed -E 's/^.*(CHG[0-9]{7}).*$/\1/')
+
+          echo "Change request ID: $CHANGE_REQUEST_ID"
+          echo "CHANGE_REQUEST_ID=${CHANGE_REQUEST_ID}" >> /artifacts/build.properties
+          echo "export GHE_REPO=$GHE_REPO" >> /artifacts/build.properties
+      volumeMounts:
+        - mountPath: /artifacts
+          name: task-volume
+
+  volumes:
+    - name: task-volume
+      persistentVolumeClaim:
+        claimName: $(inputs.params.pipeline-pvc)

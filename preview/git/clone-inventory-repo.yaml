@@ -1,0 +1,78 @@
+---
+apiVersion: tekton.dev/v1alpha1
+kind: Task
+metadata:
+  name: clone-inventory-repo
+spec:
+  inputs:
+    params:
+      - name: task-pvc
+        description: the output pvc - this is where the cloned repository will be store
+      - name: pipeline-debug
+        description: Pipeline debug mode
+        default: "0"
+  stepTemplate:
+    env:
+      - name: PIPELINE_DEBUG
+        value: $(inputs.params.pipeline-debug)
+  steps:
+    - name: clone
+      image: ibmcom/pipeline-base-image
+      command: ["/bin/bash", "-c"]
+      args:
+        - |
+          #!/bin/bash
+          source /artifacts/build.properties
+
+          if [ $PIPELINE_DEBUG == 1 ]; then
+            env
+            cat /cd-config/toolchain.json
+            trap env EXIT
+            set -x
+          fi
+
+          export INVENTORY_REPO=$(jq -r '.services[] | select(.toolchain_binding.name=="inventory-repo")
+          | .parameters.owner_id + "/" + .parameters.repo_name' /cd-config/toolchain.json)
+          export INVENTORY_FOLDER=$(jq -r '.services[] | select(.toolchain_binding.name=="inventory-repo")
+          | .parameters.repo_name' /cd-config/toolchain.json)
+          export APPLICATION_REPO=$(jq -r '.services[] | select(.toolchain_binding.name=="app-repo")
+          | .parameters.repo_name' /cd-config/toolchain.json)
+
+          cd /artifacts
+          git config --global user.email "tekton@pipeline.com"
+          git config --global user.name "Tekton"
+
+          echo "inventory repo url: $INVENTORY_REPO"
+          git clone -b next "https://$GIT_AUTH_USER:$GIT_TOKEN@github.ibm.com/$INVENTORY_REPO.git"
+          cd $INVENTORY_FOLDER
+
+          DEPLOYMENT=${APPLICATION_REPO}_us-south_prod
+
+          IMAGE=$(cat $DEPLOYMENT)
+
+          REGISTRY_URL=$(echo $IMAGE | cut -f1 -d/)
+          REGISTRY_NAMESPACE=$(echo $IMAGE | cut -f2 -d/)
+          IMAGE_NAME=$(echo $IMAGE | cut -f1 -d: | cut -f3 -d/)
+          IMAGE_TAG=$(echo $IMAGE | cut -f2 -d:)
+
+          echo "export REGISTRY_URL=$REGISTRY_URL" >> /artifacts/build.properties
+          echo "export REGISTRY_NAMESPACE=$REGISTRY_NAMESPACE" >> /artifacts/build.properties
+          echo "export IMAGE_NAME=$IMAGE_NAME" >> /artifacts/build.properties
+          echo "export IMAGE_TAG=$IMAGE_TAG" >> /artifacts/build.properties
+          echo "export INVENTORY_FOLDER=$INVENTORY_FOLDER" >> /artifacts/build.properties
+
+      volumeMounts:
+        - mountPath: /artifacts
+          name: task-volume
+        - mountPath: /cd-config
+          name: cd-config-volume
+  volumes:
+    - name: task-volume
+      persistentVolumeClaim:
+        claimName: $(inputs.params.task-pvc)
+    - name: cd-config-volume
+      configMap:
+        name: toolchain
+        items:
+          - key: toolchain.json
+            path: toolchain.json

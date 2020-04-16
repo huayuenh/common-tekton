@@ -1,0 +1,31 @@
+---
+apiVersion: tekton.dev/v1alpha1
+kind: Task
+metadata:
+  name: additional-image-checks-task
+spec:
+  inputs:
+    params:
+      - name: pipeline-debug
+        description: Pipeline debug mode
+        default: "0"
+  stepTemplate:
+    env:
+      - name: PIPELINE_DEBUG
+        value: $(inputs.params.pipeline-debug)
+  steps:
+    - name: additional-image-checks-placeholder
+      image: ibmcom/pipeline-base-image:latest
+      env:
+      command: ["/bin/bash", "-c"]
+      args:
+        - |
+          #!/bin/bash
+          echo "RUNNING additional image checks"
+
+          if [ $PIPELINE_DEBUG == 1 ]; then
+            pwd
+            env
+            trap env EXIT
+            set -x
+          fi
