@@ -24,6 +24,9 @@ spec:
       - name: dockerfile
         description: The name of the Dockerfile
         default: "Dockerfile"
+      - name: properties-file
+        description: file containing properties out of containerize task
+        default: build.properties
   # resources:
   # TODO consider an optional git repository as the source of the image to build
   # when cd tekton support will be to tekton pipeline v 0.10
