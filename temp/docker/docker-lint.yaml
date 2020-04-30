@@ -85,12 +85,7 @@ spec:
           echo "Linting Dockerfile"
           npm install -g dockerlint
           dockerlint -f ${DOCKER_ROOT}/${DOCKER_FILE}
-      volumeMounts:
-        - mountPath: /test
-          name: steps-volume
   volumes:
-    - name: steps-volume
-      emptyDir: {}
     - name: cd-config-volume
       configMap:
         name: toolchain
