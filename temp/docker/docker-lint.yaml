@@ -85,10 +85,3 @@ spec:
           echo "Linting Dockerfile"
           npm install -g dockerlint
           dockerlint -f ${DOCKER_ROOT}/${DOCKER_FILE}
-  volumes:
-    - name: cd-config-volume
-      configMap:
-        name: toolchain
-        items:
-          - key: toolchain.json
-            path: toolchain.json
