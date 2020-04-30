@@ -42,7 +42,7 @@ spec:
         - name: HOME
           value: "/root"
         - name: PROPERTIES_FILE
-          value: $(inputs.params.properties-file)
+          value: $(params.properties-file)
       command: ["/bin/bash", "-c"]
       args:
         - |
@@ -87,13 +87,10 @@ spec:
           dockerlint -f ${DOCKER_ROOT}/${DOCKER_FILE}
       volumeMounts:
         - mountPath: /test
-          name: task-volume
+          name: steps-volume
   volumes:
     - name: steps-volume
       emptyDir: {}
-    - name: task-volume
-      persistentVolumeClaim:
-        claimName: $(inputs.params.task-pvc)
     - name: cd-config-volume
       configMap:
         name: toolchain
