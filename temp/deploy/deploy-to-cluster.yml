@@ -1,0 +1,92 @@
+---
+apiVersion: tekton.dev/v1alpha1
+kind: Task
+metadata:
+  name: deploy-to-cluster-test
+spec:
+  params:
+    - name: repository
+      description: The git repo
+    - name: revision
+      description: the branch for the git repo
+    - name: cluster-name
+      description: The IBM Cloud cluster name
+    - name: cluster-region
+      description: The IBM Cloud region for your cluster
+    - name: cluster-namespace
+      description: The IBM Cloud cluster namespace
+      default: "default"
+    - name: ibmcloud-api-key
+      description: The IBM Cloud API key is used to access the IBM Cloud Kubernetes
+        Service API and interact with the cluster. You can obtain your API key with
+        'bx iam api-key-create' or via the console at https://cloud.ibm.com/iam#/apikeys
+        by clicking **Create API key** (Each API key only can be viewed once).
+    - name: ibmcloud-api
+      description: the ibmcloud api endpoint
+      default: "https://cloud.ibm.com"
+    - name: deployment-file
+      description: Kubernetes Deployment resource file to use for deploy
+      default: "deployment.yml"
+    - name: allow-create-route
+      description: Allow the task to create a Route resource (if there is none)
+        to access the deployed app
+      default: "false"
+    - name: pipeline-debug
+      description: Pipeline debug mode
+      default: "0"
+  stepTemplate:
+    env:
+      - name: PIPELINE_DEBUG
+        value: $(params.pipeline-debug)
+  steps:
+    - name: deploy-to-kubernetes
+      image: ibmcom/pipeline-base-image
+      env:
+        - name: IBMCLOUD_API_KEY
+          value: $(params.ibmcloud-api-key)
+        - name: API
+          value: $(params.ibmcloud-api)
+        - name: REGION
+          value: $(params.cluster-region)
+        - name: HOME
+          value: "/root"
+        - name: DEPLOYMENT_FILE
+          value: $(params.deployment-file)
+        - name: CLUSTER_NAMESPACE
+          value: $(params.cluster-namespace)
+        - name: PIPELINE_KUBERNETES_CLUSTER_NAME
+          value: $(params.cluster-name)
+        - name: ALLOW_CREATE_ROUTE
+          value: $(params.allow-create-route)
+      command: ["/bin/bash", "-c"]
+      # yamllint disable rule:line-length
+      args:
+        #!/bin/bash
+        # uncomment to debug the script
+        # set -x
+        # copy the script below into your app code repo (e.g. ./scripts/check_and_deploy_kubectl.sh) and 'source' it from your pipeline job
+        #    source ./scripts/check_and_deploy_kubectl.sh
+        # alternatively, you can source it from online script:
+        #    source <(curl -sSL "https://raw.githubusercontent.com/open-toolchain/commons/master/scripts/check_and_deploy_kubectl.sh")
+        # ------------------
+        # source: https://raw.githubusercontent.com/open-toolchain/commons/master/scripts/check_and_deploy_kubectl.sh
+
+        # This script checks the IBM Container Service cluster is ready, has a namespace configured with access to the private
+        # image registry (using an IBM Cloud API Key), perform a kubectl deploy of container image and check on outcome.
+        source <(curl -sSL "https://raw.githubusercontent.com/open-toolchain/commons/master/scripts/check_and_deploy_kubectl.sh")
+      volumeMounts:
+        - mountPath: /steps
+          name: steps-volume
+        - mountPath: /cd-config
+          name: cd-config-volume
+          # yamllint enable rule:line-length
+  volumes:
+    - name: task-volume
+      persistentVolumeClaim:
+        claimName: $(params.task-pvc)
+    - name: cd-config-volume
+      configMap:
+        name: toolchain
+        items:
+          - key: toolchain.json
+            path: toolchain.json
