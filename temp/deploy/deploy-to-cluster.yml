@@ -14,11 +14,6 @@ spec:
     - name: cluster-namespace
       description: The IBM Cloud cluster namespace
       default: "default"
-    - name: ibmcloud-api-key
-      description: The IBM Cloud API key is used to access the IBM Cloud Kubernetes
-        Service API and interact with the cluster. You can obtain your API key with
-        'bx iam api-key-create' or via the console at https://cloud.ibm.com/iam#/apikeys
-        by clicking **Create API key** (Each API key only can be viewed once).
     - name: ibmcloud-api
       description: the ibmcloud api endpoint
       default: "https://cloud.ibm.com"
@@ -41,7 +36,10 @@ spec:
       image: ibmcom/pipeline-base-image
       env:
         - name: IBMCLOUD_API_KEY
-          value: $(params.ibmcloud-api-key)
+          valueFrom:
+            secretKeyRef:
+              name: $(params.continuous-delivery-context-secret)
+              key: $(params.container-registry-apikey-secret-key)
         - name: API
           value: $(params.ibmcloud-api)
         - name: REGION
