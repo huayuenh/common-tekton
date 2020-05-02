@@ -7,8 +7,6 @@ spec:
   params:
     - name: repository
       description: The git repo
-    - name: revision
-      description: the branch for the git repo
     - name: cluster-name
       description: The IBM Cloud cluster name
     - name: cluster-region
