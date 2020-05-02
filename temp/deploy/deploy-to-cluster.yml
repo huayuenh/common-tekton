@@ -27,6 +27,10 @@ spec:
     - name: pipeline-debug
       description: Pipeline debug mode
       default: "0"
+  workspaces:
+    - name: workspace
+      description: A workspace backing by a volume where the report will be stored
+      mountPath: /artifacts
   stepTemplate:
     env:
       - name: PIPELINE_DEBUG
