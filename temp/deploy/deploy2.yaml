@@ -43,7 +43,6 @@ spec:
         - name: HOME
           value: "/root"
       script:
-        - |
           #!/bin/bash
           echo "test"
           set -e -o pipefail
