@@ -22,6 +22,16 @@ spec:
       default: "default"
     - name: path-to-context
       default: .
+    - name: deployment-file
+      description: Kubernetes Deployment resource file to use for deploy
+      default: "deployment.yml"
+    - name: allow-create-route
+      description: Allow the task to create a Route resource (if there is none)
+        to access the deployed app
+      default: "false"
+    - name: pipeline-debug
+      description: Pipeline debug mode
+      default: "0"
   workspaces:
     - name: workspace
       description: A workspace backing by a volume where the files (Dockerfile etc..) are expected to be
