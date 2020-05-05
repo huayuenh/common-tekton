@@ -13,8 +13,6 @@ spec:
       default: ''
     - name: repository
       description: The git repo
-    - name: revision
-      description: the branch for the git repo
     - name: cluster-name
       description: The IBM Cloud cluster name
     - name: cluster-region
@@ -24,14 +22,6 @@ spec:
       default: "default"
     - name: path-to-context
       default: .
-    - name: path-to-dockerfile
-      default: .
-    - name: dockerfile
-      description: The name of the Dockerfile
-      default: "Dockerfile"
-    - name: properties-file
-      description: file containing properties out of containerize task
-      default: build.properties
   workspaces:
     - name: workspace
       description: A workspace backing by a volume where the files (Dockerfile etc..) are expected to be
@@ -52,8 +42,6 @@ spec:
           value: '/artifacts'
         - name: HOME
           value: "/root"
-        - name: PROPERTIES_FILE
-          value: $(params.properties-file)
       command: ["/bin/bash", "-c"]
       args:
         - |
