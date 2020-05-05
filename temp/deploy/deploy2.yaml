@@ -20,6 +20,9 @@ spec:
     - name: cluster-namespace
       description: The IBM Cloud cluster namespace
       default: "default"
+    - name: ibmcloud-api
+      description: the ibmcloud api endpoint
+      default: "https://cloud.ibm.com"
     - name: path-to-context
       default: .
     - name: deployment-file
