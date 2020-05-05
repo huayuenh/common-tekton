@@ -45,6 +45,7 @@ spec:
       script:
         - |
           #!/bin/bash
+          echo "test"
           set -e -o pipefail
           source /artifacts/build.properties
 
