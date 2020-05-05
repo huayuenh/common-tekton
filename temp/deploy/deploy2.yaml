@@ -46,6 +46,13 @@ spec:
     - name: deploy-to-kubernetes
       image: ibmcom/pipeline-base-image
       env:
+        - name: IBMCLOUD_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: $(params.continuous-delivery-context-secret)
+              key: $(params.container-registry-apikey-secret-key)
+        - name: API
+          value: $(params.ibmcloud-api)
         - name: DOCKER_FILE
           value: 'Dockerfile'
         - name: DOCKER_ROOT
@@ -55,4 +62,5 @@ spec:
       script:
         #!/bin/bash
         echo "test"
+        echo "IBMCLOUD_API_KEY $IBMCLOUD_API_KEY"
 
