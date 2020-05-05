@@ -34,7 +34,7 @@ spec:
   #     type: git
   #     optional: true
   steps:
-    - name: check-dockerfile
+    - name: check-dockerfile2
       image: ibmcom/pipeline-base-image
       env:
         - name: DOCKER_FILE
