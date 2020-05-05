@@ -42,8 +42,7 @@ spec:
           value: '/artifacts'
         - name: HOME
           value: "/root"
-      command: ["/bin/bash", "-c"]
-      args:
+      script:
         - |
           #!/bin/bash
           set -e -o pipefail
