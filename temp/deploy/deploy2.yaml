@@ -20,6 +20,11 @@ spec:
     - name: cluster-namespace
       description: The IBM Cloud cluster namespace
       default: "default"
+    - name: ibmcloud-api-key
+      description: The IBM Cloud API key is used to access the IBM Cloud Kubernetes
+        Service API and interact with the cluster. You can obtain your API key with
+        'bx iam api-key-create' or via the console at https://cloud.ibm.com/iam#/apikeys
+        by clicking **Create API key** (Each API key only can be viewed once).
     - name: ibmcloud-api
       description: the ibmcloud api endpoint
       default: "https://cloud.ibm.com"
@@ -50,18 +55,21 @@ spec:
       image: ibmcom/pipeline-base-image
       env:
         - name: IBMCLOUD_API_KEY
-          valueFrom:
-            secretKeyRef:
-              name: $(params.continuous-delivery-context-secret)
-              key: $(params.container-registry-apikey-secret-key)
+          value: $(inputs.params.ibmcloud-api-key)
         - name: API
-          value: $(params.ibmcloud-api)
-        - name: DOCKER_FILE
-          value: 'Dockerfile'
-        - name: DOCKER_ROOT
-          value: '/artifacts'
+          value: $(inputs.params.ibmcloud-api)
+        - name: REGION
+          value: $(inputs.params.cluster-region)
         - name: HOME
           value: "/root"
+        - name: DEPLOYMENT_FILE
+          value: $(inputs.params.deployment-file)
+        - name: CLUSTER_NAMESPACE
+          value: $(inputs.params.cluster-namespace)
+        - name: PIPELINE_KUBERNETES_CLUSTER_NAME
+          value: $(inputs.params.cluster-name)
+        - name: ALLOW_CREATE_ROUTE
+          value: $(inputs.params.allow-create-route)
       script:
         #!/bin/bash
         echo "test"
