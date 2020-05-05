@@ -11,6 +11,17 @@ spec:
     - name: resource-group
       description: target resource group (name or id) for the ibmcloud login operation
       default: ''
+    - name: repository
+      description: The git repo
+    - name: revision
+      description: the branch for the git repo
+    - name: cluster-name
+      description: The IBM Cloud cluster name
+    - name: cluster-region
+      description: The IBM Cloud region for your cluster
+    - name: cluster-namespace
+      description: The IBM Cloud cluster namespace
+      default: "default"
     - name: path-to-context
       default: .
     - name: path-to-dockerfile
@@ -32,7 +43,7 @@ spec:
   #     type: git
   #     optional: true
   steps:
-    - name: check-dockerfile2
+    - name: deploy-to-kubernetes
       image: ibmcom/pipeline-base-image
       env:
         - name: DOCKER_FILE
@@ -46,42 +57,29 @@ spec:
       command: ["/bin/bash", "-c"]
       args:
         - |
-          set -e -o pipefail;
-          export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+          #!/bin/bash
+          set -e -o pipefail
+          source /artifacts/build.properties
 
           if [ $PIPELINE_DEBUG == 1 ]; then
-            pwd
             env
+            cat /cd-config/toolchain.json
             trap env EXIT
             set -x
           fi
 
-          # View build properties
-          if [ -f /artifacts/$PROPERTIES_FILE ]; then
-            source /artifacts/$PROPERTIES_FILE
-          else
-            echo "${PROPERTIES_FILE} : not found"
-          fi
+          IMAGE_TAG=$IMAGE_TAGS
 
-          # Input env variables (can be received via a pipeline environment properties.file.
-          DOCKER_ROOT=${DOCKER_ROOT}/${APP_DIRECTORY}
-          echo "DOCKER_ROOT=${DOCKER_ROOT}"
-          echo "DOCKER_FILE=${DOCKER_FILE}"
+          ibmcloud login -a $API -r $REGION
+          $(ibmcloud ks cluster config --cluster "${PIPELINE_KUBERNETES_CLUSTER_NAME}" --export)
+          if which oc > /dev/null && ibmcloud ks cluster get "${PIPELINE_KUBERNETES_CLUSTER_NAME}" --json | jq -e '.type=="openshift"' > /dev/null; then oc login -u apikey -p "${IBMCLOUD_API_KEY}" ; fi
+          while read line; do export $line; done < /artifacts/build.properties
+          cp /artifacts/build.properties .
 
-          # also run 'env' command to find all available env variables
-          # or learn more about the available environment variables at:
-          # https://cloud.ibm.com/docs/services/ContinuousDelivery/pipeline_deploy_var.html#deliverypipeline_environment
+          #!/bin/bash
+          # uncomment to debug the script
+          
+          
+          
+          echo "DEPLOYMENT SUCCEEDED"
 
-          echo "=========================================================="
-          echo "Checking for Dockerfile at the repository root"
-          if [ -z "${DOCKER_ROOT}" ]; then DOCKER_ROOT=. ; fi
-          if [ -z "${DOCKER_FILE}" ]; then DOCKER_FILE=Dockerfile ; fi
-          if [ -f ${DOCKER_ROOT}/${DOCKER_FILE} ]; then
-              echo -e "Dockerfile found at: ${DOCKER_FILE}"
-          else
-              echo "Dockerfile not found at: ${DOCKER_FILE}"
-              exit 1
-          fi
-          echo "Linting Dockerfile"
-          npm install -g dockerlint
-          dockerlint -f ${DOCKER_ROOT}/${DOCKER_FILE}
