@@ -247,9 +247,9 @@ spec:
         #!/bin/bash
         # uncomment to debug the script
         # set -x
-        ibmcloud login -a $API -r $REGION
-        $(ibmcloud ks cluster config --cluster "${PIPELINE_KUBERNETES_CLUSTER_NAME}" --export)
-        if which oc > /dev/null && ibmcloud ks cluster get "${PIPELINE_KUBERNETES_CLUSTER_NAME}" --json | jq -e '.type=="openshift"' > /dev/null; then oc login -u apikey -p "${IBMCLOUD_API_KEY}" ; fi
+        ibmcloud login -a $API -r $PROD_REGION_ID
+        $(ibmcloud ks cluster config --cluster "${PROD_CLUSTER_NAME}" --export)
+        if which oc > /dev/null && ibmcloud ks cluster get "${PROD_CLUSTER_NAME}" --json | jq -e '.type=="openshift"' > /dev/null; then oc login -u apikey -p "${API_KEY}" ; fi
         while read line; do export $line; done < /artifacts/build.properties
         cp /artifacts/build.properties .
         # copy the script below into your app code repo (e.g. ./scripts/check_health.sh) and 'source' it from your pipeline job
