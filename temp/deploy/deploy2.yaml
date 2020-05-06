@@ -40,6 +40,10 @@ spec:
     - name: pipeline-debug
       description: Pipeline debug mode
       default: "0"
+  stepTemplate:
+    env:
+      - name: PIPELINE_DEBUG
+        value: $(inputs.params.pipeline-debug)
   workspaces:
     - name: workspace
       description: A workspace backing by a volume where the files (Dockerfile etc..) are expected to be
