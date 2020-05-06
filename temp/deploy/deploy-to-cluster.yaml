@@ -247,6 +247,15 @@ spec:
         #!/bin/bash
         # uncomment to debug the script
         # set -x
+        set -e -o pipefail
+        source /artifacts/build.properties
+
+        if [ $PIPELINE_DEBUG == 1 ]; then
+          env
+          cat /cd-config/toolchain.json
+          trap env EXIT
+          set -x
+        fi
         ibmcloud login -a $API -r $PROD_REGION_ID
         $(ibmcloud ks cluster config --cluster "${PROD_CLUSTER_NAME}" --export)
         if which oc > /dev/null && ibmcloud ks cluster get "${PROD_CLUSTER_NAME}" --json | jq -e '.type=="openshift"' > /dev/null; then oc login -u apikey -p "${API_KEY}" ; fi
