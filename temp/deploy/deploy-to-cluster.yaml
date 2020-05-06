@@ -222,6 +222,7 @@ spec:
           fi
           echo ""
           export APP_URL=http://${IP_ADDR}:${PORT} # using 'export', the env var gets passed to next job in stage
+          echo "APP_URL=${APP_URL}" >> /artifacts/build.properties
           echo -e "VIEW THE APPLICATION AT: ${APP_URL}"
         fi
     - name: health-check
