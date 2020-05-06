@@ -72,7 +72,7 @@ spec:
           value: $(inputs.params.allow-create-route)
       script:
         -|
-        #!/bin/bash
-        echo "test"
-        echo "IBMCLOUD_API_KEY $IBMCLOUD_API_KEY"
+          #!/bin/bash
+          echo "test"
+          echo "IBMCLOUD_API_KEY $IBMCLOUD_API_KEY"
 
