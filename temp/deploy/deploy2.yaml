@@ -70,9 +70,8 @@ spec:
           value: $(inputs.params.cluster-name)
         - name: ALLOW_CREATE_ROUTE
           value: $(inputs.params.allow-create-route)
-      script:
-        -|
-          #!/bin/bash
-          echo "test"
-          echo "IBMCLOUD_API_KEY $IBMCLOUD_API_KEY"
+      script: |
+        #!/bin/bash
+        echo "test"
+        echo "IBMCLOUD_API_KEY $IBMCLOUD_API_KEY"
 
