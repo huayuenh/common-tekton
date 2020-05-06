@@ -225,38 +225,38 @@ spec:
           echo -e "VIEW THE APPLICATION AT: ${APP_URL}"
         fi
     - name: health-check
-        image: ibmcom/pipeline-base-image
-        env:
-          - name: API_KEY
-            value: $(params.ibmcloud-api-key)
-          - name: API
-            value: $(params.ibmcloud-api)
-          - name: PROD_REGION_ID
-            value: $(params.cluster-region)
-          - name: HOME
-            value: "/root"
-          - name: CLUSTER_NAMESPACE
-            value: $(params.cluster-namespace)
-          - name: PROD_CLUSTER_NAME
-            value: $(params.cluster-name)
-          - name: ALLOW_CREATE_ROUTE
-            value: $(params.allow-create-route)
-          - name: PROD_RESOURCE_GROUP
-            value: $(params.resource-group)
-        script: |
-          #!/bin/bash
-          # uncomment to debug the script
-          # set -x
-          ibmcloud login -a $API -r $REGION
-          $(ibmcloud ks cluster config --cluster "${PIPELINE_KUBERNETES_CLUSTER_NAME}" --export)
-          if which oc > /dev/null && ibmcloud ks cluster get "${PIPELINE_KUBERNETES_CLUSTER_NAME}" --json | jq -e '.type=="openshift"' > /dev/null; then oc login -u apikey -p "${IBMCLOUD_API_KEY}" ; fi
-          while read line; do export $line; done < /artifacts/build.properties
-          cp /artifacts/build.properties .
-          # copy the script below into your app code repo (e.g. ./scripts/check_health.sh) and 'source' it from your pipeline job
-          #    source ./scripts/check_health.sh
-          # alternatively, you can source it from online script:
-          #    source <(curl -sSL "https://raw.githubusercontent.com/open-toolchain/commons/master/scripts/check_health.sh")
-          # ------------------
-          # source: https://raw.githubusercontent.com/open-toolchain/commons/master/scripts/check_health.sh
-          # Check liveness and readiness probes to confirm application is healthy
-          source <(curl -sSL "https://raw.githubusercontent.com/open-toolchain/commons/master/scripts/check_health.sh")
+      image: ibmcom/pipeline-base-image
+      env:
+        - name: API_KEY
+          value: $(params.ibmcloud-api-key)
+        - name: API
+          value: $(params.ibmcloud-api)
+        - name: PROD_REGION_ID
+          value: $(params.cluster-region)
+        - name: HOME
+          value: "/root"
+        - name: CLUSTER_NAMESPACE
+          value: $(params.cluster-namespace)
+        - name: PROD_CLUSTER_NAME
+          value: $(params.cluster-name)
+        - name: ALLOW_CREATE_ROUTE
+          value: $(params.allow-create-route)
+        - name: PROD_RESOURCE_GROUP
+          value: $(params.resource-group)
+      script: |
+        #!/bin/bash
+        # uncomment to debug the script
+        # set -x
+        ibmcloud login -a $API -r $REGION
+        $(ibmcloud ks cluster config --cluster "${PIPELINE_KUBERNETES_CLUSTER_NAME}" --export)
+        if which oc > /dev/null && ibmcloud ks cluster get "${PIPELINE_KUBERNETES_CLUSTER_NAME}" --json | jq -e '.type=="openshift"' > /dev/null; then oc login -u apikey -p "${IBMCLOUD_API_KEY}" ; fi
+        while read line; do export $line; done < /artifacts/build.properties
+        cp /artifacts/build.properties .
+        # copy the script below into your app code repo (e.g. ./scripts/check_health.sh) and 'source' it from your pipeline job
+        #    source ./scripts/check_health.sh
+        # alternatively, you can source it from online script:
+        #    source <(curl -sSL "https://raw.githubusercontent.com/open-toolchain/commons/master/scripts/check_health.sh")
+        # ------------------
+        # source: https://raw.githubusercontent.com/open-toolchain/commons/master/scripts/check_health.sh
+        # Check liveness and readiness probes to confirm application is healthy
+        source <(curl -sSL "https://raw.githubusercontent.com/open-toolchain/commons/master/scripts/check_health.sh")
