@@ -10,7 +10,7 @@ spec:
       default: cd-secret
     - name: resource-group
       description: target resource group (name or id) for the ibmcloud login operation
-      default: ''
+      default: 'default'
     - name: repository
       description: The git repo
     - name: cluster-name
@@ -43,7 +43,7 @@ spec:
   stepTemplate:
     env:
       - name: PIPELINE_DEBUG
-        value: $(inputs.params.pipeline-debug)
+        value: $(params.pipeline-debug)
   workspaces:
     - name: workspace
       description: A workspace backing by a volume where the files (Dockerfile etc..) are expected to be
@@ -59,21 +59,21 @@ spec:
       image: ibmcom/pipeline-base-image
       env:
         - name: IBMCLOUD_API_KEY
-          value: $(inputs.params.ibmcloud-api-key)
+          value: $(params.ibmcloud-api-key)
         - name: API
-          value: $(inputs.params.ibmcloud-api)
+          value: $(params.ibmcloud-api)
         - name: REGION
-          value: $(inputs.params.cluster-region)
+          value: $(params.cluster-region)
         - name: HOME
           value: "/root"
         - name: DEPLOYMENT_FILE
-          value: $(inputs.params.deployment-file)
+          value: $(params.deployment-file)
         - name: CLUSTER_NAMESPACE
-          value: $(inputs.params.cluster-namespace)
+          value: $(params.cluster-namespace)
         - name: PIPELINE_KUBERNETES_CLUSTER_NAME
-          value: $(inputs.params.cluster-name)
+          value: $(params.cluster-name)
         - name: ALLOW_CREATE_ROUTE
-          value: $(inputs.params.allow-create-route)
+          value: $(params.allow-create-route)
       script: |
         #!/bin/bash
         set -e -o pipefail
@@ -221,5 +221,42 @@ spec:
             PORT=$( kubectl get services --namespace ${CLUSTER_NAMESPACE} | grep ${APP_SERVICE} | sed 's/.*:\([0-9]*\).*/\1/g' )
           fi
           echo ""
-          echo -e "VIEW THE APPLICATION AT: http://${IP_ADDR}:${PORT}"
+          export APP_URL=http://${IP_ADDR}:${PORT} # using 'export', the env var gets passed to next job in stage
+          echo -e "VIEW THE APPLICATION AT: ${APP_URL}"
         fi
+    - name: health-check
+        image: ibmcom/pipeline-base-image
+        env:
+          - name: API_KEY
+            value: $(params.ibmcloud-api-key)
+          - name: API
+            value: $(params.ibmcloud-api)
+          - name: PROD_REGION_ID
+            value: $(params.cluster-region)
+          - name: HOME
+            value: "/root"
+          - name: CLUSTER_NAMESPACE
+            value: $(params.cluster-namespace)
+          - name: PROD_CLUSTER_NAME
+            value: $(params.cluster-name)
+          - name: ALLOW_CREATE_ROUTE
+            value: $(params.allow-create-route)
+          - name: PROD_RESOURCE_GROUP
+            value: $(params.resource-group)
+        script: |
+          #!/bin/bash
+          # uncomment to debug the script
+          # set -x
+          ibmcloud login -a $API -r $REGION
+          $(ibmcloud ks cluster config --cluster "${PIPELINE_KUBERNETES_CLUSTER_NAME}" --export)
+          if which oc > /dev/null && ibmcloud ks cluster get "${PIPELINE_KUBERNETES_CLUSTER_NAME}" --json | jq -e '.type=="openshift"' > /dev/null; then oc login -u apikey -p "${IBMCLOUD_API_KEY}" ; fi
+          while read line; do export $line; done < /artifacts/build.properties
+          cp /artifacts/build.properties .
+          # copy the script below into your app code repo (e.g. ./scripts/check_health.sh) and 'source' it from your pipeline job
+          #    source ./scripts/check_health.sh
+          # alternatively, you can source it from online script:
+          #    source <(curl -sSL "https://raw.githubusercontent.com/open-toolchain/commons/master/scripts/check_health.sh")
+          # ------------------
+          # source: https://raw.githubusercontent.com/open-toolchain/commons/master/scripts/check_health.sh
+          # Check liveness and readiness probes to confirm application is healthy
+          source <(curl -sSL "https://raw.githubusercontent.com/open-toolchain/commons/master/scripts/check_health.sh")
