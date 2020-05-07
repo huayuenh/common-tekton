@@ -94,7 +94,7 @@ spec:
         while read line; do export $line; done < /artifacts/build.properties
         cp /artifacts/build.properties .
 
-        source <(curl -sSL "https://raw.githubusercontent.com/open-toolchain/commons/master/scripts/check_and_deploy_kubectl.sh")
+        source <(curl -sSL "https://raw.githubusercontent.com/open-toolchain/commons/master/scripts/check_and_deploy_helm.sh")
     - name: health-check
       image: ibmcom/pipeline-base-image
       env:
