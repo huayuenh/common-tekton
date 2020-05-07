@@ -58,7 +58,7 @@ spec:
     - name: deploy-to-kubernetes
       image: ibmcom/pipeline-base-image
       env:
-        - name: IBM_CLOUD_API_KEY
+        - name: IBMCLOUD_API_KEY
           value: $(params.ibmcloud-api-key)
         - name: API
           value: $(params.ibmcloud-api)
@@ -92,11 +92,12 @@ spec:
 
         ibmcloud login -a $API -r $REGION
         $(ibmcloud ks cluster config --cluster "${PIPELINE_KUBERNETES_CLUSTER_NAME}" --export)
-        if which oc > /dev/null && ibmcloud ks cluster get "${PIPELINE_KUBERNETES_CLUSTER_NAME}" --json | jq -e '.type=="openshift"' > /dev/null; then oc login -u apikey -p "${IBM_CLOUD_API_KEY}" ; fi
+        if which oc > /dev/null && ibmcloud ks cluster get "${PIPELINE_KUBERNETES_CLUSTER_NAME}" --json | jq -e '.type=="openshift"' > /dev/null; then oc login -u apikey -p "${IBMCLOUD_API_KEY}" ; fi
         while read line; do export $line; done < /artifacts/build.properties
         cp /artifacts/build.properties .
         echo "test secrets ****"
         kubectl get secret --namespace ${CLUSTER_NAMESPACE}
+        IBM_CLOUD_API_KEY=$IBMCLOUD_API_KEY
         PIPELINE_TOOLCHAIN_ID="test"
         source <(curl -sSL "https://raw.githubusercontent.com/open-toolchain/commons/master/scripts/check_and_deploy_helm.sh")
     - name: health-check
