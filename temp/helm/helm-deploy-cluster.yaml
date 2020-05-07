@@ -76,10 +76,6 @@ spec:
           value: $(params.allow-create-route)
         - name: CHART_ROOT
           value: "/artifacts/chart"
-        - name: PIPELINE_RUN_ID
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.annotations['devops.cloud.ibm.com/tekton-pipeline']
       script: |
         #!/bin/bash
         set -e -o pipefail
