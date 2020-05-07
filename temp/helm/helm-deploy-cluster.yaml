@@ -76,6 +76,10 @@ spec:
           value: $(params.allow-create-route)
         - name: CHART_ROOT
           value: "/artifacts/chart"
+        - name: PIPELINE_RUN_ID
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.annotations['devops.cloud.ibm.com/tekton-pipeline']
       script: |
         #!/bin/bash
         set -e -o pipefail
@@ -95,6 +99,8 @@ spec:
         if which oc > /dev/null && ibmcloud ks cluster get "${PIPELINE_KUBERNETES_CLUSTER_NAME}" --json | jq -e '.type=="openshift"' > /dev/null; then oc login -u apikey -p "${IBMCLOUD_API_KEY}" ; fi
         while read line; do export $line; done < /artifacts/build.properties
         cp /artifacts/build.properties .
+        echo "test secrets ****"
+        kubectl get secret --namespace ${CLUSTER_NAMESPACE}
         echo "showing path ******************"
         pwd
         ls
