@@ -97,13 +97,6 @@ spec:
         cp /artifacts/build.properties .
         echo "test secrets ****"
         kubectl get secret --namespace ${CLUSTER_NAMESPACE}
-        echo "showing path ******************"
-        pwd
-        ls
-        echo "*****************"
-        #IBM_CLOUD_API_KEY=$IBMCLOUD_API_KEY
-        echo "IBM_CLOUD_API_KEY $IBM_CLOUD_API_KEY"
-        ls /artifacts
         PIPELINE_TOOLCHAIN_ID="test"
         source <(curl -sSL "https://raw.githubusercontent.com/open-toolchain/commons/master/scripts/check_and_deploy_helm.sh")
     - name: health-check
