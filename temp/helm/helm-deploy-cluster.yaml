@@ -93,7 +93,12 @@ spec:
         if which oc > /dev/null && ibmcloud ks cluster get "${PIPELINE_KUBERNETES_CLUSTER_NAME}" --json | jq -e '.type=="openshift"' > /dev/null; then oc login -u apikey -p "${IBMCLOUD_API_KEY}" ; fi
         while read line; do export $line; done < /artifacts/build.properties
         cp /artifacts/build.properties .
-
+        echo "showing path ******************"
+        pwd
+        ls
+        echo "*****************"
+        ls /artifacts
+        cd artifacts
         source <(curl -sSL "https://raw.githubusercontent.com/open-toolchain/commons/master/scripts/check_and_deploy_helm.sh")
     - name: health-check
       image: ibmcom/pipeline-base-image
