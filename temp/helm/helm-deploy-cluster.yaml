@@ -74,6 +74,8 @@ spec:
           value: $(params.cluster-name)
         - name: ALLOW_CREATE_ROUTE
           value: $(params.allow-create-route)
+        - name: CHART_ROOT
+          value: "/artifacts/chart"
       script: |
         #!/bin/bash
         set -e -o pipefail
@@ -98,7 +100,6 @@ spec:
         ls
         echo "*****************"
         ls /artifacts
-        cd artifacts
         source <(curl -sSL "https://raw.githubusercontent.com/open-toolchain/commons/master/scripts/check_and_deploy_helm.sh")
     - name: health-check
       image: ibmcom/pipeline-base-image
