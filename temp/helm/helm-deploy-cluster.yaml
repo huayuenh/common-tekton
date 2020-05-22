@@ -56,7 +56,7 @@ spec:
   #     optional: true
   steps:
     - name: deploy-to-kubernetes
-      image: ibmcom/pipeline-base-image
+      image: ibmcom/pipeline-base-image:2.6
       env:
         - name: IBMCLOUD_API_KEY
           value: $(params.ibmcloud-api-key)
@@ -101,7 +101,7 @@ spec:
         PIPELINE_TOOLCHAIN_ID="test"
         source <(curl -sSL "https://raw.githubusercontent.com/open-toolchain/commons/master/scripts/check_and_deploy_helm.sh")
     - name: health-check
-      image: ibmcom/pipeline-base-image
+      image: ibmcom/pipeline-base-image:2.6
       env:
         - name: IBMCLOUD_API_KEY
           value: $(params.ibmcloud-api-key)

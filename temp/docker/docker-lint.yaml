@@ -33,7 +33,7 @@ spec:
   #     optional: true
   steps:
     - name: check-dockerfile
-      image: ibmcom/pipeline-base-image
+      image: ibmcom/pipeline-base-image:2.6
       env:
         - name: DOCKER_FILE
           value: 'Dockerfile'
