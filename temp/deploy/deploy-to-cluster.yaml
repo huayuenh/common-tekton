@@ -89,8 +89,12 @@ spec:
         IMAGE_TAG=$IMAGE_TAGS
 
         ibmcloud login -a $API -r $REGION
+        echo "LOGIN SUCCESSFUL"
+        echo "CLUSTE NAME $PIPELINE_KUBERNETES_CLUSTER_NAME"
         $(ibmcloud ks cluster config --cluster "${PIPELINE_KUBERNETES_CLUSTER_NAME}" --export)
+        echo "CHECK OC"
         if which oc > /dev/null && ibmcloud ks cluster get "${PIPELINE_KUBERNETES_CLUSTER_NAME}" --json | jq -e '.type=="openshift"' > /dev/null; then oc login -u apikey -p "${IBMCLOUD_API_KEY}" ; fi
+        echo "READ  PROPS"
         while read line; do export $line; done < /artifacts/build.properties
         cp /artifacts/build.properties .
 
