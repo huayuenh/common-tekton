@@ -55,8 +55,8 @@ spec:
   #     type: git
   #     optional: true
   steps:
-    - name: deploy-to-kubernetes
-      image: ibmcom/pipeline-base-image
+    - name: prepare-razee-deploy
+      image: ibmcom/pipeline-base-image:2.6
       env:
         - name: IBMCLOUD_API_KEY
           value: $(params.ibmcloud-api-key)
@@ -105,8 +105,11 @@ spec:
         cp /artifacts/build.properties .
         kubectl get secret --namespace ${CLUSTER_NAMESPACE}
         echo "RAZEE"
+        ls
+        source <(curl -s -S -L "https://raw.githubusercontent.com/open-toolchain/kube-razee-toolchain/master/.bluemix/prepare_deploy.sh")
+        
     - name: health-check
-      image: ibmcom/pipeline-base-image
+      image: ibmcom/pipeline-base-image:2.6
       env:
         - name: IBMCLOUD_API_KEY
           value: $(params.ibmcloud-api-key)
