@@ -106,6 +106,8 @@ spec:
         kubectl get secret --namespace ${CLUSTER_NAMESPACE}
         echo "RAZEE"
         ls
+        cd /artifacts
+        ls
         source <(curl -s -S -L "https://raw.githubusercontent.com/open-toolchain/kube-razee-toolchain/master/.bluemix/prepare_deploy.sh")
         
     - name: health-check
