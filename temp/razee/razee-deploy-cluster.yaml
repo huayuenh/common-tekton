@@ -76,6 +76,16 @@ spec:
           value: $(params.allow-create-route)
         - name: CHART_ROOT
           value: "/artifacts/chart"
+        - name: CONFIG_REPO_NAME
+          value: ''
+        - name: CONFIG_REPO_URL
+          value: ''
+        - name: CONFIG_REPO_BRANCH
+          value: master
+        - name: buildprops
+          value: build.properties
+        - name: CLUSTER_REGION
+          value: $(params.cluster-region)
       script: |
         #!/bin/bash
         set -e -o pipefail
@@ -88,18 +98,13 @@ spec:
           set -x
         fi
 
-        IMAGE_TAG=$IMAGE_TAGS
-
         ibmcloud login -a $API -r $REGION
         $(ibmcloud ks cluster config --cluster "${PIPELINE_KUBERNETES_CLUSTER_NAME}" --export)
         if which oc > /dev/null && ibmcloud ks cluster get "${PIPELINE_KUBERNETES_CLUSTER_NAME}" --json | jq -e '.type=="openshift"' > /dev/null; then oc login -u apikey -p "${IBMCLOUD_API_KEY}" ; fi
         while read line; do export $line; done < /artifacts/build.properties
         cp /artifacts/build.properties .
-        echo "test secrets ****"
         kubectl get secret --namespace ${CLUSTER_NAMESPACE}
-        IBM_CLOUD_API_KEY=$IBMCLOUD_API_KEY
-        PIPELINE_TOOLCHAIN_ID="test"
-        source <(curl -sSL "https://raw.githubusercontent.com/open-toolchain/commons/master/scripts/check_and_deploy_helm.sh")
+        echo "RAZEE"
     - name: health-check
       image: ibmcom/pipeline-base-image
       env:
