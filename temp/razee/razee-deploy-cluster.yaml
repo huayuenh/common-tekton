@@ -117,7 +117,7 @@ spec:
         ls
         cd /artifacts
         ls
-        source <(curl -s -S -L "https://raw.githubusercontent.com/open-toolchain/kube-razee-toolchain/master/.bluemix/prepare_deploy.sh")
+        source <(curl -s -S -L "https://raw.githubusercontent.com/huayuenh/testrun/master/.bluemix/prepare_deploy.sh")
       volumeMounts:
         - mountPath: /cd-config
           name: cd-config-volume
