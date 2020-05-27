@@ -48,6 +48,13 @@ spec:
     - name: workspace
       description: A workspace backing by a volume where the files (Dockerfile etc..) are expected to be
       mountPath: /artifacts
+  volumes:
+    - name: cd-config-volume
+      configMap:
+        name: toolchain
+        items:
+          - key: toolchain.json
+            path: toolchain.json
   # resources:
   # TODO consider an optional git repository as the source of the image to build
   # when cd tekton support will be to tekton pipeline v 0.10
@@ -97,6 +104,7 @@ spec:
           trap env EXIT
           set -x
         fi
+        
 
         ibmcloud login -a $API -r $REGION
         $(ibmcloud ks cluster config --cluster "${PIPELINE_KUBERNETES_CLUSTER_NAME}" --export)
@@ -105,11 +113,14 @@ spec:
         cp /artifacts/build.properties .
         kubectl get secret --namespace ${CLUSTER_NAMESPACE}
         echo "RAZEE"
+        cat /cd-config/toolchain.json
         ls
         cd /artifacts
         ls
         source <(curl -s -S -L "https://raw.githubusercontent.com/open-toolchain/kube-razee-toolchain/master/.bluemix/prepare_deploy.sh")
-        
+      volumeMounts:
+        - mountPath: /cd-config
+          name: cd-config-volume
     - name: health-check
       image: ibmcom/pipeline-base-image:2.6
       env:
